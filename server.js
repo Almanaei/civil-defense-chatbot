@@ -147,6 +147,37 @@ app.get('/api/memory/:sessionId', (req, res) => {
     }
 });
 
+// Add endpoint to clear conversation memory for a session
+app.delete('/api/memory/:sessionId', (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Session ID is required'
+            });
+        }
+        
+        const cleared = chatbot.clearMemory(sessionId);
+        
+        res.json({
+            success: true,
+            sessionId: sessionId,
+            cleared: cleared,
+            message: cleared ? 'Memory cleared successfully' : 'No memory found for this session'
+        });
+        
+    } catch (error) {
+        console.error('Error clearing conversation memory:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error clearing conversation memory',
+            error: error.message
+        });
+    }
+});
+
 // Get conversations for a session
 app.get('/api/conversations/:sessionId', async (req, res) => {
     try {

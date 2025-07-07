@@ -818,19 +818,31 @@ class ChatApp {
     }
 
     // Add a new method to clear the chat history and session
-    clearChatHistory() {
-        // Clear the chat messages from the UI
+    async clearChatHistory() {
+        // Clear chat messages in the UI
         const chatMessages = document.getElementById('chatMessages');
         if (chatMessages) {
             chatMessages.innerHTML = '';
+            this.addWelcomeMessage();
+        }
+        
+        // Clear conversation memory on the server
+        try {
+            if (this.sessionId) {
+                const response = await fetch(`/api/memory/${this.sessionId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                console.log('Memory cleared:', data);
+            }
+        } catch (error) {
+            console.error('Error clearing memory:', error);
         }
         
         // Generate a new session ID
-        this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
+        this.sessionId = this.getOrCreateSessionId();
         localStorage.setItem('civilDefenseChatSessionId', this.sessionId);
-        
-        // Add welcome message
-        this.addWelcomeMessage();
     }
 
     // Add a welcome message method

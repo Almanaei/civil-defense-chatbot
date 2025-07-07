@@ -10,6 +10,7 @@ class CivilDefenseChatbot {
         this.conversationMemory = new Map(); // Add memory storage
         this.memoryLimit = 10; // Store last 10 interactions per session
         this.loadKnowledgeBase();
+        this.loadConversationMemory(); // Load conversation memory from disk
     }
 
     /**
@@ -847,6 +848,76 @@ class CivilDefenseChatbot {
                 memory.slice(memory.length - this.memoryLimit)
             );
         }
+        
+        // Save memory to disk
+        this.saveConversationMemory();
+    }
+    
+    /**
+     * Save conversation memory to disk
+     */
+    saveConversationMemory() {
+        try {
+            const memoryPath = path.join(__dirname, 'data', 'conversation_memory.json');
+            const dir = path.dirname(memoryPath);
+            
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            
+            // Convert Map to object for JSON serialization
+            const memoryObject = {};
+            this.conversationMemory.forEach((value, key) => {
+                memoryObject[key] = value;
+            });
+            
+            fs.writeFileSync(memoryPath, JSON.stringify(memoryObject, null, 2), 'utf8');
+            console.log('✅ Conversation memory saved successfully');
+        } catch (error) {
+            console.error('❌ Error saving conversation memory:', error.message);
+        }
+    }
+    
+    /**
+     * Load conversation memory from disk
+     */
+    loadConversationMemory() {
+        try {
+            const memoryPath = path.join(__dirname, 'data', 'conversation_memory.json');
+            
+            if (fs.existsSync(memoryPath)) {
+                const data = fs.readFileSync(memoryPath, 'utf8');
+                const memoryObject = JSON.parse(data);
+                
+                // Convert object back to Map
+                Object.entries(memoryObject).forEach(([key, value]) => {
+                    this.conversationMemory.set(key, value);
+                });
+                
+                console.log('✅ Conversation memory loaded successfully');
+            } else {
+                console.log('ℹ️ No conversation memory file found, starting with empty memory');
+            }
+        } catch (error) {
+            console.error('❌ Error loading conversation memory:', error.message);
+        }
+    }
+    
+    /**
+     * Clear conversation memory for a specific session
+     * @param {string} sessionId - Session identifier
+     * @returns {boolean} - True if memory was cleared, false otherwise
+     */
+    clearMemory(sessionId) {
+        if (!sessionId) return false;
+        
+        if (this.conversationMemory.has(sessionId)) {
+            this.conversationMemory.delete(sessionId);
+            this.saveConversationMemory();
+            return true;
+        }
+        
+        return false;
     }
     
     /**
