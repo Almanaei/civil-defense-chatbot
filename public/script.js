@@ -1,94 +1,70 @@
 // Chat Application Class
 class ChatApp {
     constructor() {
-        this.currentLanguage = 'arabic';
-        this.sessionId = this.generateSessionId();
         this.isLoading = false;
-        this.init();
+        this.isRTL = false;
+        this.sessionId = this.getOrCreateSessionId();
+        this.initialize();
     }
 
-    init() {
-        this.setupEventListeners();
-        this.setWelcomeTime();
-        this.loadSystemStats();
-        this.autoResizeTextarea();
+    initialize() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setupEventListeners();
+            this.detectLanguage();
+            this.autoResizeTextarea();
+            this.toggleSendButton();
+            this.addWelcomeMessage();
+        });
     }
 
-    generateSessionId() {
-        return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    getOrCreateSessionId() {
+        // Try to get existing session ID from localStorage
+        let sessionId = localStorage.getItem('civilDefenseChatSessionId');
+        
+        // If no session ID exists, create a new one
+        if (!sessionId) {
+            sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
+            localStorage.setItem('civilDefenseChatSessionId', sessionId);
+        }
+        
+        return sessionId;
     }
 
     setupEventListeners() {
-        // Message input and send
-        const messageInput = document.getElementById('messageInput');
+        // Send message when the send button is clicked
         const sendButton = document.getElementById('sendButton');
-        const charCount = document.getElementById('charCount');
-
-        if (messageInput) {
-            messageInput.addEventListener('input', (e) => {
-                this.updateCharCount(e.target);
-                this.toggleSendButton();
-                this.autoResizeTextarea();
-            });
-
-            messageInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    this.sendMessage();
-                }
-            });
-        }
-
         if (sendButton) {
             sendButton.addEventListener('click', () => this.sendMessage());
         }
 
-        // Language toggle
-        const languageToggle = document.getElementById('languageToggle');
-        if (languageToggle) {
-            languageToggle.addEventListener('click', () => this.toggleLanguage());
-        }
+        // Get message input element
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            // Send message when Enter key is pressed (without Shift)
+            messageInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    this.sendMessage();
+                }
+            });
 
-        // Clear chat
-        const clearChat = document.getElementById('clearChat');
-        if (clearChat) {
-            clearChat.addEventListener('click', () => this.clearChat());
+            // Update character count and resize textarea as user types
+            messageInput.addEventListener('input', () => {
+                this.updateCharCount(messageInput);
+                this.toggleSendButton();
+                this.autoResizeTextarea();
+            });
         }
-
-        // Quick actions
-        const quickActions = document.getElementById('quickActions');
-        if (quickActions) {
-            quickActions.addEventListener('click', (e) => {
-                if (e.target.closest('.quick-action-btn')) {
-                    const action = e.target.closest('.quick-action-btn').dataset.action;
-                    this.handleQuickAction(action);
+        
+        // Clear chat history when clear button is clicked
+        const clearChatBtn = document.getElementById('clearChatBtn');
+        if (clearChatBtn) {
+            clearChatBtn.addEventListener('click', () => {
+                if (confirm('هل أنت متأكد من رغبتك في مسح سجل المحادثة؟\nAre you sure you want to clear the chat history?')) {
+                    this.clearChatHistory();
                 }
             });
         }
-
-        // Admin panel
-        const adminToggle = document.getElementById('adminToggle');
-        const adminModal = document.getElementById('adminModal');
-        const closeAdmin = document.getElementById('closeAdmin');
-
-        if (adminToggle) {
-            adminToggle.addEventListener('click', () => this.toggleAdminModal());
-        }
-
-        if (closeAdmin) {
-            closeAdmin.addEventListener('click', () => this.closeAdminModal());
-        }
-
-        if (adminModal) {
-            adminModal.addEventListener('click', (e) => {
-                if (e.target === adminModal) {
-                    this.closeAdminModal();
-                }
-            });
-        }
-
-        // Admin actions
-        this.setupAdminEventListeners();
     }
 
     setupAdminEventListeners() {
@@ -243,6 +219,12 @@ class ChatApp {
             const data = await response.json();
 
             if (data.success) {
+                // Update session ID if the server generated a new one
+                if (data.sessionId && data.sessionId !== this.sessionId) {
+                    this.sessionId = data.sessionId;
+                    localStorage.setItem('civilDefenseChatSessionId', this.sessionId);
+                }
+                
                 this.addMessage(data.response, 'bot');
             } else {
                 this.addMessage('عذراً، حدث خطأ في معالجة رسالتك. يرجى المحاولة مرة أخرى.', 'bot');
@@ -820,9 +802,32 @@ class ChatApp {
             }
         }
     }
+
+    // Add a new method to clear the chat history and session
+    clearChatHistory() {
+        // Clear the chat messages from the UI
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
+        
+        // Generate a new session ID
+        this.sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
+        localStorage.setItem('civilDefenseChatSessionId', this.sessionId);
+        
+        // Add welcome message
+        this.addWelcomeMessage();
+    }
+
+    // Add a welcome message method
+    addWelcomeMessage() {
+        const welcomeMessage = this.isRTL ? 
+            'مرحباً بك في نظام الدفاع المدني. كيف يمكنني مساعدتك اليوم؟' : 
+            'Welcome to the Civil Defense system. How can I help you today?';
+        
+        this.addMessage(welcomeMessage, 'bot');
+    }
 }
 
-// Initialize the chat application when the DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.chatApp = new ChatApp();
-}); 
+// Initialize the chat app
+const chatApp = new ChatApp(); 

@@ -83,8 +83,11 @@ app.post('/api/chat', async (req, res) => {
         const detectedLang = detectLanguage(message);
         console.log(`Detected language directly: ${detectedLang}`);
 
+        // Generate a session ID if not provided
+        const activeSessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 12)}`;
+
         // Process message with chatbot
-        const result = chatbot.processMessage(message, sessionId);
+        const result = chatbot.processMessage(message, activeSessionId);
         console.log(`Chatbot result:`, {
             success: result.success,
             confidence: result.confidence,
@@ -93,14 +96,15 @@ app.post('/api/chat', async (req, res) => {
         });
 
         // Log conversation
-        await logConversation(sessionId, message, result.response, result.success);
+        await logConversation(activeSessionId, message, result.response, result.success);
 
         res.json({
             success: true,
             response: result.response,
             confidence: result.confidence || 0,
             serviceId: result.serviceId || null,
-            language: result.language || detectedLang
+            language: result.language || detectedLang,
+            sessionId: activeSessionId
         });
 
     } catch (error) {
@@ -108,6 +112,36 @@ app.post('/api/chat', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error',
+            error: error.message
+        });
+    }
+});
+
+// Add a new endpoint to get conversation memory for a session
+app.get('/api/memory/:sessionId', (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        
+        if (!sessionId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Session ID is required'
+            });
+        }
+        
+        const memory = chatbot.getMemory(sessionId);
+        
+        res.json({
+            success: true,
+            sessionId: sessionId,
+            memory: memory
+        });
+        
+    } catch (error) {
+        console.error('Error retrieving conversation memory:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error retrieving conversation memory',
             error: error.message
         });
     }

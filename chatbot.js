@@ -7,6 +7,8 @@ class CivilDefenseChatbot {
   constructor() {
         this.knowledgeBase = null;
         this.conversations = new Map();
+        this.conversationMemory = new Map(); // Add memory storage
+        this.memoryLimit = 10; // Store last 10 interactions per session
         this.loadKnowledgeBase();
     }
 
@@ -801,6 +803,110 @@ class CivilDefenseChatbot {
     }
 
     /**
+     * Add a message to the conversation memory
+     * @param {string} sessionId - Session identifier
+     * @param {object} interaction - The interaction object containing user message and bot response
+     */
+    addToMemory(sessionId, interaction) {
+        if (!sessionId) return;
+        
+        if (!this.conversationMemory.has(sessionId)) {
+            this.conversationMemory.set(sessionId, []);
+        }
+        
+        const memory = this.conversationMemory.get(sessionId);
+        memory.push({
+            timestamp: new Date().toISOString(),
+            userMessage: interaction.userMessage,
+            botResponse: interaction.botResponse,
+            serviceId: interaction.serviceId || null
+        });
+        
+        // Keep only the last N interactions
+        if (memory.length > this.memoryLimit) {
+            this.conversationMemory.set(
+                sessionId, 
+                memory.slice(memory.length - this.memoryLimit)
+            );
+        }
+    }
+    
+    /**
+     * Get conversation memory for a session
+     * @param {string} sessionId - Session identifier
+     * @returns {Array} - Array of conversation memory objects
+     */
+    getMemory(sessionId) {
+        if (!sessionId || !this.conversationMemory.has(sessionId)) {
+            return [];
+        }
+        return this.conversationMemory.get(sessionId);
+    }
+    
+    /**
+     * Get the last interaction from memory
+     * @param {string} sessionId - Session identifier
+     * @returns {object|null} - Last interaction or null if no memory
+     */
+    getLastInteraction(sessionId) {
+        const memory = this.getMemory(sessionId);
+        if (memory.length === 0) return null;
+        return memory[memory.length - 1];
+    }
+    
+    /**
+     * Check if user has asked about a specific service recently
+     * @param {string} sessionId - Session identifier
+     * @returns {string|null} - Service ID if found, null otherwise
+     */
+    getRecentServiceContext(sessionId) {
+        const memory = this.getMemory(sessionId);
+        // Look through recent interactions for service context
+        for (let i = memory.length - 1; i >= 0; i--) {
+            if (memory[i].serviceId) {
+                return memory[i].serviceId;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Check if the current query might be a follow-up question
+     * @param {string} userMessage - The user's message
+     * @param {string} sessionId - Session identifier
+     * @returns {boolean} - True if likely a follow-up question
+     */
+    isLikelyFollowUp(userMessage, sessionId) {
+        // Common follow-up patterns
+        const followUpPatterns = {
+            arabic: [
+                /^ما هي/i, /^كم/i, /^متى/i, /^أين/i, /^كيف/i, /^لماذا/i, 
+                /^هل/i, /^ما/i, /^من/i, /^ماذا/i, /^وماذا/i, /^و /i
+            ],
+            english: [
+                /^what/i, /^how/i, /^when/i, /^where/i, /^why/i, 
+                /^who/i, /^which/i, /^can/i, /^do/i, /^is/i, /^are/i, 
+                /^and /i, /^but /i
+            ]
+        };
+        
+        const lastInteraction = this.getLastInteraction(sessionId);
+        if (!lastInteraction) return false;
+        
+        const language = this.detectLanguage(userMessage);
+        const patterns = language === 'arabic' ? followUpPatterns.arabic : followUpPatterns.english;
+        
+        // Check if message starts with a follow-up pattern
+        for (const pattern of patterns) {
+            if (pattern.test(userMessage)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
      * Process user message and generate response
      */
     processMessage(userMessage, sessionId = null) {
@@ -836,175 +942,130 @@ class CivilDefenseChatbot {
             
             // Check if it's a greeting
             if (this.isGreeting(trimmedMessage)) {
+                const response = this.getGreetingResponse(language);
+                
+                // Store in memory
+                if (sessionId) {
+                    this.addToMemory(sessionId, {
+                        userMessage: trimmedMessage,
+                        botResponse: response
+                    });
+                }
+                
                 return {
                     success: true,
                     message: 'Greeting detected',
-                    response: this.getGreetingResponse(language),
+                    response: response,
                     language: language
                 };
             }
-            
+
             // Check if user is asking for all services
             if (this.isAskingForAllServices(trimmedMessage)) {
                 console.log(`[Chatbot] User is asking for all services`);
+                console.log(`[Chatbot] Generating all services list response`);
+                
+                const response = this.generateAllServicesResponse(language);
+                
+                // Store in memory
+                if (sessionId) {
+                    this.addToMemory(sessionId, {
+                        userMessage: trimmedMessage,
+                        botResponse: response
+                    });
+                }
+                
                 return {
                     success: true,
-                    message: 'All services requested',
-                    response: this.generateAllServicesResponse(language),
+                    response: response,
                     language: language
                 };
             }
+
+            // Check if this is a follow-up question about a previous service
+            let contextServiceId = null;
+            if (sessionId && this.isLikelyFollowUp(trimmedMessage, sessionId)) {
+                contextServiceId = this.getRecentServiceContext(sessionId);
+                console.log(`[Chatbot] Detected possible follow-up question with context: ${contextServiceId}`);
+            }
             
-            // Check for field-specific questions using our intent system
-            const complexPatternMatch = intentSystem.matchComplexPattern(trimmedMessage);
-            const userKeywords = this.extractKeywordsFromText(trimmedMessage);
-            const intentMatches = userKeywords.map(keyword => 
-                intentSystem.getIntentCategoryForKeyword(keyword)
-            ).filter(match => match !== null);
-            
-            // Check if user is asking about a specific field (fees, requirements, etc.)
-            const fieldIntents = intentMatches.filter(match => match && match.type === 'field');
-            
-            // Check if we have a complex pattern match for a specific field
-            let fieldCategory = null;
-            if (complexPatternMatch) {
-                console.log('[Chatbot] Complex pattern match:', complexPatternMatch);
-                if (complexPatternMatch.intent === 'service_fees') {
-                    fieldCategory = "رسوم الخدمة";
-                } else if (complexPatternMatch.intent === 'required_documents') {
-                    fieldCategory = "المستندات المطلوبة";
-                } else if (complexPatternMatch.intent === 'application_process') {
-                    fieldCategory = "كيفية التقديم";
-                } else if (complexPatternMatch.intent === 'service_duration') {
-                    fieldCategory = "مدة إنجاز الخدمة";
+            // If we have context from a previous service, use it
+            if (contextServiceId) {
+                const serviceDetails = this.getServiceById(contextServiceId);
+                if (serviceDetails) {
+                    console.log(`[Chatbot] Using context from previous service: ${contextServiceId}`);
+                    const response = this.generateServiceResponse(contextServiceId, serviceDetails, language);
+                    
+                    // Store in memory
+                    if (sessionId) {
+                        this.addToMemory(sessionId, {
+                            userMessage: trimmedMessage,
+                            botResponse: response,
+                            serviceId: contextServiceId
+                        });
+                    }
+                    
+                    return {
+                        success: true,
+                        confidence: 10, // Lower confidence for context-based responses
+                        serviceId: contextServiceId,
+                        response: response,
+                        language: language
+                    };
                 }
             }
 
-            // Find best matching service with higher confidence threshold
+            // Find the best matching service
             const bestMatch = this.findBestService(trimmedMessage);
             
-            if (bestMatch && bestMatch.score > 6) {
-                let response;
+            if (bestMatch) {
+                const { serviceId, service, score, matchedCategory } = bestMatch;
+                console.log(`[Chatbot] Generating service response:`, bestMatch, language);
                 
-                // If we have field-specific intents from complex patterns or keyword matching
-                if (fieldCategory || fieldIntents.length > 0) {
-                    const { service } = bestMatch;
-                    
-                    // Use field category from complex pattern match if available, otherwise use from keyword matching
-                    const targetFieldCategory = fieldCategory || (fieldIntents.length > 0 ? fieldIntents[0].category : null);
-                    
-                    // Handle Arabic field names from the knowledge base
-                    const serviceName = service['اسم الخدمة'] || service.name || 'الخدمة';
-                    const serviceDesc = service['وصف الخدمة'] || service.description || '';
-                    const serviceFees = service['رسوم الخدمة'] || service.fees || '';
-                    const serviceReqs = service['شروط الخدمة'] || service.requirements || '';
-                    const serviceProcedures = service['كيفية التقديم'] || service.procedures || '';
-                    const serviceDocs = service['المستندات المطلوبة'] || service.documents || '';
-                    const serviceDuration = service['مدة إنجاز الخدمة'] || service.duration || '';
-                    
-                    if (language === 'arabic') {
-                        response = `**${serviceName}**\n\n`;
-                        
-                        if (targetFieldCategory === "رسوم الخدمة" && serviceFees) {
-                            response += `**الرسوم:**\n• ${serviceFees}\n\n`;
-                        } else if (targetFieldCategory === "شروط الخدمة" && serviceReqs) {
-                            // Split by commas to make a list
-                            const reqsList = serviceReqs.split(/،|,/).filter(item => item.trim());
-                            if (reqsList.length > 1) {
-                                response += `**الشروط:**\n${reqsList.map(req => `• ${req.trim()}`).join('\n')}\n\n`;
-                            } else {
-                                response += `**الشروط:**\n• ${serviceReqs}\n\n`;
-                            }
-                        } else if (targetFieldCategory === "كيفية التقديم" && serviceProcedures) {
-                            // Split by commas or periods to make a list
-                            const procList = serviceProcedures.split(/،|,|\.|\./).filter(item => item.trim());
-                            if (procList.length > 1) {
-                                response += `**كيفية التقديم:**\n${procList.map(proc => `• ${proc.trim()}`).join('\n')}\n\n`;
-                            } else {
-                                response += `**كيفية التقديم:**\n• ${serviceProcedures}\n\n`;
-                            }
-                        } else if (targetFieldCategory === "المستندات المطلوبة" && serviceDocs) {
-                            // Split by commas to make a list
-                            const docsList = serviceDocs.split(/،|,/).filter(item => item.trim());
-                            if (docsList.length > 1) {
-                                response += `**المستندات المطلوبة:**\n${docsList.map(doc => `• ${doc.trim()}`).join('\n')}\n\n`;
-                            } else {
-                                response += `**المستندات المطلوبة:**\n• ${serviceDocs}\n\n`;
-                            }
-                        } else if (targetFieldCategory === "مدة إنجاز الخدمة" && serviceDuration) {
-                            response += `**مدة إنجاز الخدمة:**\n• ${serviceDuration}\n\n`;
-                        } else if (targetFieldCategory === "اسم الخدمة" && serviceDesc) {
-                            response += `**الوصف:**\n• ${serviceDesc}\n\n`;
-                        } else {
-                            // Fallback to full service info if the field doesn't exist
-                            response = this.generateServiceResponse(bestMatch, language);
-                        }
-                    } else {
-                        // Same for English
-                        response = `**${serviceName}**\n\n`;
-                        
-                        if (targetFieldCategory === "رسوم الخدمة" && serviceFees) {
-                            response += `**Fees:**\n• ${serviceFees}\n\n`;
-                        } else if (targetFieldCategory === "شروط الخدمة" && serviceReqs) {
-                            const reqsList = serviceReqs.split(/،|,/).filter(item => item.trim());
-                            if (reqsList.length > 1) {
-                                response += `**Requirements:**\n${reqsList.map(req => `• ${req.trim()}`).join('\n')}\n\n`;
-                            } else {
-                                response += `**Requirements:**\n• ${serviceReqs}\n\n`;
-                            }
-                        } else if (targetFieldCategory === "كيفية التقديم" && serviceProcedures) {
-                            const procList = serviceProcedures.split(/،|,|\.|\./).filter(item => item.trim());
-                            if (procList.length > 1) {
-                                response += `**How to Apply:**\n${procList.map(proc => `• ${proc.trim()}`).join('\n')}\n\n`;
-                            } else {
-                                response += `**How to Apply:**\n• ${serviceProcedures}\n\n`;
-                            }
-                        } else if (targetFieldCategory === "المستندات المطلوبة" && serviceDocs) {
-                            const docsList = serviceDocs.split(/،|,/).filter(item => item.trim());
-                            if (docsList.length > 1) {
-                                response += `**Required Documents:**\n${docsList.map(doc => `• ${doc.trim()}`).join('\n')}\n\n`;
-                            } else {
-                                response += `**Required Documents:**\n• ${serviceDocs}\n\n`;
-                            }
-                        } else if (targetFieldCategory === "مدة إنجاز الخدمة" && serviceDuration) {
-                            response += `**Processing Time:**\n• ${serviceDuration}\n\n`;
-                        } else if (targetFieldCategory === "اسم الخدمة" && serviceDesc) {
-                            response += `**Description:**\n• ${serviceDesc}\n\n`;
-                        } else {
-                            // Fallback to full service info if the field doesn't exist
-                            response = this.generateServiceResponse(bestMatch, language);
-                        }
-                    }
-                } else {
-                    // No field-specific intent, show the complete service information
-                    response = this.generateServiceResponse(bestMatch, language);
+                const response = this.generateServiceResponse(serviceId, service, language);
+                
+                // Store in memory
+                if (sessionId) {
+                    this.addToMemory(sessionId, {
+                        userMessage: trimmedMessage,
+                        botResponse: response,
+                        serviceId: serviceId
+                    });
                 }
                 
                 return {
                     success: true,
-                    message: 'Service found',
+                    confidence: score,
+                    serviceId: serviceId,
                     response: response,
-                    serviceId: bestMatch.serviceId,
-                    confidence: bestMatch.score,
                     language: language
                 };
             }
 
-            // If no specific service found, provide a helpful fallback
-            const fallbackResponse = this.getStructuredFallbackResponse(trimmedMessage, language);
+            // No service found, generate fallback response
+            const fallbackResponse = this.getFallbackResponse(language);
+            
+            // Store in memory
+            if (sessionId) {
+                this.addToMemory(sessionId, {
+                    userMessage: trimmedMessage,
+                    botResponse: fallbackResponse
+                });
+            }
+            
             return {
                 success: true,
-                message: 'No specific service found',
+                confidence: 0,
                 response: fallbackResponse,
                 language: language
             };
-
         } catch (error) {
             console.error('Error processing message:', error);
             return {
                 success: false,
-                message: 'Internal error',
-                response: 'عذراً، حدث خطأ في معالجة رسالتك. يرجى المحاولة مرة أخرى.'
+                message: 'Error processing message',
+                response: 'Sorry, there was an error processing your message. Please try again.',
+                error: error.message
             };
         }
     }
