@@ -66,6 +66,19 @@ class ChatApp {
                 }
             });
         }
+
+        // Add event listeners for quick action buttons
+        const quickActionBtns = document.querySelectorAll('.quick-action-btn');
+        if (quickActionBtns.length > 0) {
+            quickActionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const action = btn.getAttribute('data-action');
+                    if (action) {
+                        this.handleQuickAction(action);
+                    }
+                });
+            });
+        }
     }
 
     setupAdminEventListeners() {
