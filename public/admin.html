@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة إدارة شات بوت الدفاع المدني</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="admin-body">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <div class="admin-sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shield-alt"></i>
+                <h2>إدارة النظام</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>لوحة التحكم</span>
+                </a>
+                <a href="#services" class="nav-item" data-section="services">
+                    <i class="fas fa-list"></i>
+                    <span>إدارة الخدمات</span>
+                </a>
+                <a href="#conversations" class="nav-item" data-section="conversations">
+                    <i class="fas fa-comments"></i>
+                    <span>المحادثات</span>
+                </a>
+                <a href="#knowledge" class="nav-item" data-section="knowledge">
+                    <i class="fas fa-database"></i>
+                    <span>قاعدة المعرفة</span>
+                </a>
+                <a href="#settings" class="nav-item" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>الإعدادات</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="admin-main">
+            <!-- Dashboard Section -->
+            <div class="admin-section active" id="dashboard">
+                <div class="section-header">
+                    <h1>لوحة التحكم</h1>
+                    <p>نظرة عامة على أداء النظام</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalConversations">0</h3>
+                            <p>إجمالي المحادثات</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="activeUsers">0</h3>
+                            <p>المستخدمين النشطين</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-list"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalServices">0</h3>
+                            <p>الخدمات المتاحة</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="successRate">0%</h3>
+                            <p>معدل النجاح</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-charts">
+                    <div class="chart-container">
+                        <h3>نشاط المحادثات</h3>
+                        <div class="chart-placeholder">
+                            <i class="fas fa-chart-bar"></i>
+                            <p>رسم بياني للمحادثات</p>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>أكثر الخدمات طلباً</h3>
+                        <div class="chart-placeholder">
+                            <i class="fas fa-chart-pie"></i>
+                            <p>رسم بياني للخدمات</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Services Section -->
+            <div class="admin-section" id="services">
+                <div class="section-header">
+                    <h1>إدارة الخدمات</h1>
+                    <button class="btn-primary" id="addServiceBtn">
+                        <i class="fas fa-plus"></i>
+                        إضافة خدمة جديدة
+                    </button>
+                </div>
+
+                <div class="services-grid" id="servicesGrid">
+                    <!-- Services will be loaded here -->
+                </div>
+
+                <!-- Add Service Modal -->
+                <div class="modal" id="addServiceModal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>إضافة خدمة جديدة</h2>
+                            <button class="close-btn" id="closeAddService">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="addServiceForm">
+                                <div class="form-group">
+                                    <label for="serviceName">اسم الخدمة</label>
+                                    <input type="text" id="serviceName" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="serviceDescription">وصف الخدمة</label>
+                                    <textarea id="serviceDescription" rows="3" required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="serviceKeywords">الكلمات المفتاحية</label>
+                                    <input type="text" id="serviceKeywords" placeholder="كلمة1, كلمة2, كلمة3">
+                                </div>
+                                <div class="form-group">
+                                    <label for="serviceRequirements">المتطلبات</label>
+                                    <textarea id="serviceRequirements" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="serviceProcedures">الإجراءات</label>
+                                    <textarea id="serviceProcedures" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="serviceFees">الرسوم</label>
+                                    <input type="text" id="serviceFees">
+                                </div>
+                                <div class="form-group">
+                                    <label for="serviceContact">معلومات التواصل</label>
+                                    <input type="text" id="serviceContact">
+                                </div>
+                                <div class="form-actions">
+                                    <button type="button" class="btn-secondary" id="cancelAddService">إلغاء</button>
+                                    <button type="submit" class="btn-primary">حفظ الخدمة</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversations Section -->
+            <div class="admin-section" id="conversations">
+                <div class="section-header">
+                    <h1>المحادثات</h1>
+                    <div class="header-actions">
+                        <button class="btn-secondary" id="exportConversations">
+                            <i class="fas fa-download"></i>
+                            تصدير المحادثات
+                        </button>
+                        <button class="btn-secondary" id="clearConversations">
+                            <i class="fas fa-trash"></i>
+                            مسح المحادثات
+                        </button>
+                    </div>
+                </div>
+
+                <div class="conversations-list" id="conversationsList">
+                    <!-- Conversations will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Knowledge Base Section -->
+            <div class="admin-section" id="knowledge">
+                <div class="section-header">
+                    <h1>قاعدة المعرفة</h1>
+                    <div class="header-actions">
+                        <button class="btn-secondary" id="exportKB">
+                            <i class="fas fa-download"></i>
+                            تصدير قاعدة المعرفة
+                        </button>
+                        <button class="btn-secondary" id="importKB">
+                            <i class="fas fa-upload"></i>
+                            استيراد قاعدة المعرفة
+                        </button>
+                        <input type="file" id="kbFileInput" accept=".json" style="display: none;">
+                    </div>
+                </div>
+
+                <div class="knowledge-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">إجمالي الخدمات</span>
+                        <span class="stat-value" id="kbTotalServices">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">إجمالي الكلمات المفتاحية</span>
+                        <span class="stat-value" id="kbTotalKeywords">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">آخر تحديث</span>
+                        <span class="stat-value" id="kbLastUpdate">-</span>
+                    </div>
+                </div>
+
+                <div class="knowledge-actions">
+                    <button class="btn-primary" id="backupKB">
+                        <i class="fas fa-save"></i>
+                        إنشاء نسخة احتياطية
+                    </button>
+                    <button class="btn-secondary" id="restoreKB">
+                        <i class="fas fa-undo"></i>
+                        استعادة نسخة احتياطية
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="admin-section" id="settings">
+                <div class="section-header">
+                    <h1>الإعدادات</h1>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="setting-card">
+                        <h3>إعدادات النظام</h3>
+                        <div class="setting-item">
+                            <label for="autoBackup">النسخ الاحتياطي التلقائي</label>
+                            <input type="checkbox" id="autoBackup">
+                        </div>
+                        <div class="setting-item">
+                            <label for="maxConversations">الحد الأقصى للمحادثات</label>
+                            <input type="number" id="maxConversations" value="1000" min="100" max="10000">
+                        </div>
+                        <div class="setting-item">
+                            <label for="sessionTimeout">مهلة الجلسة (دقائق)</label>
+                            <input type="number" id="sessionTimeout" value="30" min="5" max="120">
+                        </div>
+                    </div>
+
+                    <div class="setting-card">
+                        <h3>إعدادات الشات بوت</h3>
+                        <div class="setting-item">
+                            <label for="defaultLanguage">اللغة الافتراضية</label>
+                            <select id="defaultLanguage">
+                                <option value="arabic">العربية</option>
+                                <option value="english">English</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="confidenceThreshold">حد الثقة</label>
+                            <input type="range" id="confidenceThreshold" min="0" max="100" value="50">
+                            <span id="confidenceValue">50%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="btn-primary" id="saveSettings">
+                        <i class="fas fa-save"></i>
+                        حفظ الإعدادات
+                    </button>
+                    <button class="btn-secondary" id="resetSettings">
+                        <i class="fas fa-undo"></i>
+                        إعادة تعيين
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

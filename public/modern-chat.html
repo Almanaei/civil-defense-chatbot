@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شات بوت الدفاع المدني</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>شات بوت الدفاع المدني</h1>
+                </div>
+                <div class="header-actions">
+                    <button id="languageToggle" class="btn-secondary">
+                        <i class="fas fa-language"></i>
+                        <span>English</span>
+                    </button>
+                    <button id="clearChat" class="btn-secondary">
+                        <i class="fas fa-trash"></i>
+                        <span>مسح المحادثة</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Messages Area -->
+        <div class="chat-messages" id="chatMessages">
+            <!-- Welcome Message -->
+            <div class="message bot-message">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-text">
+                        أهلاً وسهلاً بك! أنا شات بوت الدفاع المدني، كيف يمكنني مساعدتك اليوم؟
+                    </div>
+                    <div class="message-time" id="welcomeTime"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions" id="quickActions">
+            <button class="quick-action-btn" data-action="services">
+                <i class="fas fa-list"></i>
+                <span>الخدمات المتاحة</span>
+            </button>
+            <button class="quick-action-btn" data-action="licenses">
+                <i class="fas fa-certificate"></i>
+                <span>التراخيص</span>
+            </button>
+            <button class="quick-action-btn" data-action="safety">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>متطلبات السلامة</span>
+            </button>
+            <button class="quick-action-btn" data-action="contact">
+                <i class="fas fa-phone"></i>
+                <span>معلومات التواصل</span>
+            </button>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-container">
+            <div class="input-wrapper">
+                <textarea 
+                    id="messageInput" 
+                    placeholder="اكتب رسالتك هنا..."
+                    rows="1"
+                    maxlength="500"
+                ></textarea>
+                <div class="input-actions">
+                    <span class="char-count" id="charCount">0/500</span>
+                    <button id="sendButton" class="send-btn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading-indicator" id="loadingIndicator" style="display: none;">
+            <div class="loading-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <span>جاري الكتابة...</span>
+        </div>
+    </div>
+
+    <!-- Admin Panel Toggle -->
+    <div class="admin-toggle">
+        <button id="adminToggle" class="admin-btn">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+
+    <!-- Admin Panel Modal -->
+    <div class="admin-modal" id="adminModal">
+        <div class="admin-content">
+            <div class="admin-header">
+                <h2>لوحة الإدارة</h2>
+                <button class="close-btn" id="closeAdmin">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="admin-body">
+                <div class="admin-section">
+                    <h3>إحصائيات النظام</h3>
+                    <div class="stats-grid" id="systemStats">
+                        <div class="stat-item">
+                            <span class="stat-label">إجمالي المحادثات</span>
+                            <span class="stat-value" id="totalConversations">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">الخدمات المتاحة</span>
+                            <span class="stat-value" id="totalServices">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">حالة النظام</span>
+                            <span class="stat-value status-ok" id="systemStatus">مستقر</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-section">
+                    <h3>إدارة قاعدة المعرفة</h3>
+                    <div class="admin-actions">
+                        <button class="admin-action-btn" id="exportKB">
+                            <i class="fas fa-download"></i>
+                            تصدير قاعدة المعرفة
+                        </button>
+                        <button class="admin-action-btn" id="importKB">
+                            <i class="fas fa-upload"></i>
+                            استيراد قاعدة المعرفة
+                        </button>
+                        <input type="file" id="kbFileInput" accept=".json" style="display: none;">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
