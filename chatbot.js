@@ -561,14 +561,32 @@ class CivilDefenseChatbot {
     generateServiceResponse(match, language) {
         console.log('[Chatbot] Generating service response:', match, language);
         
-        if (!match || !match.service) {
+        // Handle different parameter formats
+        let serviceId, service;
+        
+        if (typeof match === 'string' && arguments.length >= 2 && typeof arguments[1] === 'object') {
+            // Called with (serviceId, service, language) format
+            serviceId = match;
+            service = arguments[1];
+            language = arguments[2] || language;
+        } else if (match && match.service) {
+            // Called with (match, language) format
+            serviceId = match.serviceId;
+            service = match.service;
+        } else {
             console.log('[Chatbot] Invalid match object for response generation');
             return language === 'arabic' ? 
                 'عذراً، لم أتمكن من العثور على معلومات عن هذه الخدمة.' : 
                 'Sorry, I could not find information about this service.';
         }
         
-        const { service } = match;
+        if (!service) {
+            console.log('[Chatbot] No service data for response generation');
+            return language === 'arabic' ? 
+                'عذراً، لم أتمكن من العثور على معلومات عن هذه الخدمة.' : 
+                'Sorry, I could not find information about this service.';
+        }
+        
         let response = '';
         
         // Handle Arabic field names from the knowledge base
@@ -579,7 +597,7 @@ class CivilDefenseChatbot {
         const serviceProcedures = service['كيفية التقديم'] || service.procedures || '';
         const serviceDocs = service['المستندات المطلوبة'] || service.documents || '';
         const serviceDuration = service['مدة إنجاز الخدمة'] || service.duration || '';
-        const serviceGroup = service.group || (match.serviceId ? match.serviceId.split('_')[0] : '');
+        const serviceGroup = service.group || (serviceId ? serviceId.split('_')[0] : '');
         
         if (language === 'arabic') {
             // Title of the service
@@ -1213,6 +1231,48 @@ Please specify the service you need in more detail.`;
      */
     getService(serviceId) {
         return this.knowledgeBase.services[serviceId] || null;
+    }
+
+    /**
+     * Get a specific service by ID from the group structure
+     * @param {string} serviceId - Service ID in format "groupName_index"
+     * @returns {Object|null} - Service object or null if not found
+     */
+    getServiceById(serviceId) {
+        if (!serviceId || !this.knowledgeBase) {
+            return null;
+        }
+        
+        try {
+            // Parse the service ID to get group and index
+            const [groupName, serviceIndex] = serviceId.split('_');
+            
+            // Check if the group exists and has the service at the specified index
+            if (this.knowledgeBase[groupName] && 
+                this.knowledgeBase[groupName][parseInt(serviceIndex) - 1]) {
+                
+                const service = this.knowledgeBase[groupName][parseInt(serviceIndex) - 1];
+                return {
+                    serviceId: serviceId,
+                    service: {
+                        name: service['اسم الخدمة'] || '',
+                        description: service['وصف الخدمة'] || '',
+                        fees: service['رسوم الخدمة'] || '',
+                        requirements: service['شروط الخدمة'] || '',
+                        procedures: service['كيفية التقديم'] || '',
+                        documents: service['المستندات المطلوبة'] || '',
+                        duration: service['مدة إنجاز الخدمة'] || '',
+                        group: groupName
+                    },
+                    score: 10,
+                    matchedCategory: 'direct_lookup'
+                };
+            }
+        } catch (error) {
+            console.error(`[Chatbot] Error getting service by ID ${serviceId}:`, error);
+        }
+        
+        return null;
     }
 
     /**
