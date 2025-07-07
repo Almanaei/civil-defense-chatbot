@@ -3,6 +3,7 @@ class ChatApp {
     constructor() {
         this.isLoading = false;
         this.isRTL = false;
+        this.currentLanguage = 'arabic'; // Add the missing currentLanguage property
         this.sessionId = this.getOrCreateSessionId();
         this.initialize();
     }
@@ -826,6 +827,23 @@ class ChatApp {
             'Welcome to the Civil Defense system. How can I help you today?';
         
         this.addMessage(welcomeMessage, 'bot');
+    }
+
+    // Add the missing detectLanguage method
+    detectLanguage() {
+        // Check if the page language direction is RTL
+        const htmlDir = document.documentElement.dir || 'ltr';
+        this.isRTL = htmlDir === 'rtl';
+        
+        // Set the current language based on RTL
+        this.currentLanguage = this.isRTL ? 'arabic' : 'english';
+        
+        // Apply RTL class if needed
+        if (this.isRTL) {
+            document.body.classList.add('rtl');
+        } else {
+            document.body.classList.remove('rtl');
+        }
     }
 }
 
